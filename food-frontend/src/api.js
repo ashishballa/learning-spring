@@ -30,3 +30,9 @@ export async function updateFoodItem(id, item) {
   if (!res.ok) throw new Error('Failed to update food item');
   return res.json();
 }
+
+export async function getAuditLogs() {
+  const res = await fetch('/api/audit-logs');
+  if (!res.ok) throw new Error('Failed to fetch audit logs');
+  return res.json();
+}

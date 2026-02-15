@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getFoodItems, addFoodItem, deleteFoodItem, updateFoodItem } from './api'
+import { getFoodItems, addFoodItem, deleteFoodItem, updateFoodItem, getAuditLogs } from './api'
 import './App.css'
 
 function App() {
@@ -8,9 +8,11 @@ function App() {
   const [price, setPrice] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [error, setError] = useState('')
+  const [logs, setLogs] = useState([])
 
   useEffect(() => {
     loadItems()
+    loadLogs()
   }, [])
 
   async function loadItems() {
@@ -19,6 +21,15 @@ function App() {
       setItems(data)
     } catch {
       setError('Could not load food items. Is the backend running?')
+    }
+  }
+
+  async function loadLogs() {
+    try {
+      const data = await getAuditLogs()
+      setLogs(data)
+    } catch {
+      // silently fail for logs
     }
   }
 
@@ -37,6 +48,7 @@ function App() {
       setPrice('')
       setError('')
       loadItems()
+      loadLogs()
     } catch {
       setError('Failed to save food item')
     }
@@ -46,6 +58,7 @@ function App() {
     try {
       await deleteFoodItem(id)
       loadItems()
+      loadLogs()
     } catch {
       setError('Failed to delete food item')
     }
@@ -118,6 +131,36 @@ function App() {
                   <button onClick={() => handleEdit(item)} className="btn-edit">Edit</button>
                   <button onClick={() => handleDelete(item.id)} className="btn-delete">Delete</button>
                 </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+
+      <h2 className="audit-heading">Audit Logs</h2>
+      <table className="table audit-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Action</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {logs.length === 0 ? (
+            <tr>
+              <td colSpan="3" className="empty">No audit logs yet</td>
+            </tr>
+          ) : (
+            logs.map((log) => (
+              <tr key={log.id}>
+                <td className="audit-ts">{new Date(log.timestamp).toLocaleString()}</td>
+                <td>
+                  <span className={`badge badge-${log.action.toLowerCase()}`}>
+                    {log.action}
+                  </span>
+                </td>
+                <td>{log.details}</td>
               </tr>
             ))
           )}

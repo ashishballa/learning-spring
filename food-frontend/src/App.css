@@ -102,3 +102,43 @@ h1 {
 .btn-delete:hover {
   background: #dc2626;
 }
+
+/* Audit Logs */
+.audit-heading {
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.audit-table {
+  font-size: 0.9rem;
+}
+
+.audit-ts {
+  white-space: nowrap;
+  color: #6b7280;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-create {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-update {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-delete {
+  background: #fee2e2;
+  color: #991b1b;
+}

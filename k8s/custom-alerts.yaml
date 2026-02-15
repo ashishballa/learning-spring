@@ -1,0 +1,89 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: custom-app-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: app-alerts
+      rules:
+
+        # 1. Backend pod is down
+        - alert: BackendDown
+          expr: kube_deployment_status_replicas_available{deployment="backend"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Backend is down"
+            description: "The backend deployment has 0 available replicas for more than 1 minute."
+
+        # 2. Backend pod restarting frequently
+        - alert: BackendCrashLooping
+          expr: increase(kube_pod_container_status_restarts_total{container="backend"}[10m]) > 3
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Backend is crash-looping"
+            description: "Backend container has restarted {{ $value }} times in the last 10 minutes."
+
+        # 3. Backend using more than 80% of its CPU limit
+        - alert: BackendHighCPU
+          expr: |
+            sum(rate(container_cpu_usage_seconds_total{container="backend"}[5m]))
+            /
+            sum(kube_pod_container_resource_limits{container="backend", resource="cpu"})
+            > 0.8
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Backend CPU usage is high"
+            description: "Backend is using more than 80% of its CPU limit for over 2 minutes."
+
+        # 4. Backend using more than 80% of its memory limit
+        - alert: BackendHighMemory
+          expr: |
+            sum(container_memory_working_set_bytes{container="backend"})
+            /
+            sum(kube_pod_container_resource_limits{container="backend", resource="memory"})
+            > 0.8
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Backend memory usage is high"
+            description: "Backend is using more than 80% of its memory limit for over 2 minutes."
+
+        # 5. Postgres is down
+        - alert: PostgresDown
+          expr: kube_statefulset_status_replicas_ready{statefulset="postgres"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PostgreSQL is down"
+            description: "The postgres StatefulSet has 0 ready replicas for more than 1 minute."
+
+        # 6. Frontend pod is down
+        - alert: FrontendDown
+          expr: kube_deployment_status_replicas_available{deployment="frontend"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Frontend is down"
+            description: "The frontend deployment has 0 available replicas for more than 1 minute."
+
+        # 7. Pod OOM killed
+        - alert: PodOOMKilled
+          expr: kube_pod_container_status_last_terminated_reason{reason="OOMKilled", namespace="default"} > 0
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod {{ $labels.pod }} was OOM killed"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} was terminated due to Out Of Memory."

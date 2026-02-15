@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getFoodItems, addFoodItem, deleteFoodItem, updateFoodItem, getAuditLogs } from './api'
+import { logEvent } from './logger'
 import './App.css'
 
 function App() {
@@ -40,9 +41,11 @@ function App() {
     try {
       if (editingId) {
         await updateFoodItem(editingId, { name, price: parseFloat(price) })
+        logEvent('update', 'form', `Updated item ${editingId}: ${name} - $${price}`)
         setEditingId(null)
       } else {
         await addFoodItem({ name, price: parseFloat(price) })
+        logEvent('add', 'form', `Added item: ${name} - $${price}`)
       }
       setName('')
       setPrice('')
@@ -57,6 +60,7 @@ function App() {
   async function handleDelete(id) {
     try {
       await deleteFoodItem(id)
+      logEvent('delete', 'button', `Deleted item ${id}`)
       loadItems()
       loadLogs()
     } catch {
@@ -68,6 +72,7 @@ function App() {
     setEditingId(item.id)
     setName(item.name)
     setPrice(String(item.price))
+    logEvent('edit_click', 'button', `Editing item ${item.id}: ${item.name}`)
   }
 
   function handleCancel() {

@@ -46,13 +46,16 @@ spec:
           volumeMounts:
             - name: pipeline
               mountPath: /usr/share/logstash/pipeline
+          env:
+            - name: LS_JAVA_OPTS
+              value: "-Xms256m -Xmx512m"
           resources:
             requests:
               cpu: 200m
-              memory: 512Mi
+              memory: 768Mi
             limits:
               cpu: 500m
-              memory: 768Mi
+              memory: 1Gi
       volumes:
         - name: pipeline
           configMap:

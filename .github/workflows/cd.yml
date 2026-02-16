@@ -1,0 +1,96 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/food-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/food-frontend
+
+jobs:
+  # ──────────────────────────────────────
+  # Build & Push images to GitHub Container Registry (FREE)
+  # ──────────────────────────────────────
+  build-and-push:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Backend image
+      - name: Build & push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./firstApp
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+            ${{ env.BACKEND_IMAGE }}:latest
+
+      # Frontend image
+      - name: Build & push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./food-frontend
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            ${{ env.FRONTEND_IMAGE }}:latest
+
+      - name: Deployment summary
+        run: |
+          echo "### Images pushed to GHCR" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Backend:**" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.BACKEND_IMAGE }}:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.BACKEND_IMAGE }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Frontend:**" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.FRONTEND_IMAGE }}:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.FRONTEND_IMAGE }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Pull locally:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.BACKEND_IMAGE }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.FRONTEND_IMAGE }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # ──────────────────────────────────────
+  # Deploy to minikube (local) instructions
+  # ──────────────────────────────────────
+  deploy-instructions:
+    name: Deploy Instructions
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print deploy commands
+        run: |
+          echo "### Deploy to local minikube" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# Pull latest images" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.BACKEND_IMAGE }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.FRONTEND_IMAGE }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Tag for minikube" >> $GITHUB_STEP_SUMMARY
+          echo "eval \$(minikube docker-env)" >> $GITHUB_STEP_SUMMARY
+          echo "docker tag ${{ env.BACKEND_IMAGE }}:latest food-backend:latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker tag ${{ env.FRONTEND_IMAGE }}:latest food-frontend:latest" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Update deployments" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl set image deployment/backend backend=food-backend:latest" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl set image deployment/frontend frontend=food-frontend:latest" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { getFoodItems, addFoodItem, deleteFoodItem, updateFoodItem, getAuditLogs } from './api'
 import { logEvent } from './logger'
 import './App.css'
@@ -10,6 +10,16 @@ function App() {
   const [editingId, setEditingId] = useState(null)
   const [error, setError] = useState('')
   const [logs, setLogs] = useState([])
+
+  const nameTimer = useRef(null)
+  const priceTimer = useRef(null)
+
+  const debouncedLog = useCallback((field, value, timerRef) => {
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      if (value) logEvent('input_change', field, value)
+    }, 500)
+  }, [])
 
   useEffect(() => {
     loadItems()
@@ -58,9 +68,10 @@ function App() {
   }
 
   async function handleDelete(id) {
+    const item = items.find(i => i.id === id)
     try {
       await deleteFoodItem(id)
-      logEvent('delete', 'button', `Deleted item ${id}`)
+      logEvent('delete', 'button', `Deleted item ${id}: ${item?.name} - $${item?.price}`)
       loadItems()
       loadLogs()
     } catch {
@@ -72,7 +83,7 @@ function App() {
     setEditingId(item.id)
     setName(item.name)
     setPrice(String(item.price))
-    logEvent('edit_click', 'button', `Editing item ${item.id}: ${item.name}`)
+    logEvent('edit_click', 'button', `Editing item ${item.id}: ${item.name} - $${item.price}`)
   }
 
   function handleCancel() {
@@ -92,14 +103,16 @@ function App() {
           type="text"
           placeholder="Food name"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => { setName(e.target.value); debouncedLog('name_field', e.target.value, nameTimer) }}
+          onBlur={() => { clearTimeout(nameTimer.current); if (name) logEvent('input_change', 'name_field', name) }}
           required
         />
         <input
           type="number"
           placeholder="Price"
           value={price}
-          onChange={(e) => setPrice(e.target.value)}
+          onChange={(e) => { setPrice(e.target.value); debouncedLog('price_field', e.target.value, priceTimer) }}
+          onBlur={() => { clearTimeout(priceTimer.current); if (price) logEvent('input_change', 'price_field', price) }}
           min="0"
           step="0.01"
           required
